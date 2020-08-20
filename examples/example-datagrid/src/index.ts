@@ -12,7 +12,7 @@ import 'es6-promise/auto';  // polyfill Promise on IE
 import {
   BasicKeyHandler, BasicMouseHandler, BasicSelectionModel, CellRenderer,
   DataGrid, DataModel, JSONModel, TextRenderer, MutableDataModel, CellEditor, ICellEditor
-} from '@lumino/datagrid';
+} from '../../../packages/datagrid/src/index';
 
 import {
   DockPanel, StackedPanel, Widget
@@ -514,10 +514,10 @@ function main(): void {
   grid7.dataModel = model6;
 
   let wrapper1 = createWrapper(grid1, 'Trillion Rows/Cols');
-  let wrapper2 = createWrapper(grid2, 'Streaming Rows');
-  let wrapper3 = createWrapper(grid3, 'Random Ticks 1');
-  let wrapper4 = createWrapper(grid4, 'Random Ticks 2');
-  let wrapper5 = createWrapper(grid5, 'JSON Data');
+  // let wrapper2 = createWrapper(grid2, 'Streaming Rows');
+  // let wrapper3 = createWrapper(grid3, 'Random Ticks 1');
+  // let wrapper4 = createWrapper(grid4, 'Random Ticks 2');
+  // let wrapper5 = createWrapper(grid5, 'JSON Data');
   let wrapper6 = createWrapper(grid6, 'Editable Grid');
   let wrapper7 = createWrapper(grid7, 'Copy');
 
@@ -525,10 +525,10 @@ function main(): void {
   dock.id = 'dock';
 
   dock.addWidget(wrapper1);
-  dock.addWidget(wrapper2, { mode: 'split-right', ref: wrapper1 });
-  dock.addWidget(wrapper3, { mode: 'split-bottom', ref: wrapper1 });
-  dock.addWidget(wrapper4, { mode: 'split-bottom', ref: wrapper2 });
-  dock.addWidget(wrapper5, { mode: 'split-bottom', ref: wrapper2 });
+  // dock.addWidget(wrapper2, { mode: 'split-right', ref: wrapper1 });
+  // dock.addWidget(wrapper3, { mode: 'split-bottom', ref: wrapper1 });
+  // dock.addWidget(wrapper4, { mode: 'split-bottom', ref: wrapper2 });
+  // dock.addWidget(wrapper5, { mode: 'split-bottom', ref: wrapper2 });
   dock.addWidget(wrapper6, { mode: 'tab-before', ref: wrapper1 });
   dock.addWidget(wrapper7, { mode: 'split-bottom', ref: wrapper6 });
   dock.activateWidget(wrapper6);
