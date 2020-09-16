@@ -104,6 +104,16 @@ namespace CellRenderer {
      * The metadata for the cell.
      */
     readonly metadata: DataModel.Metadata;
+
+    /**
+     * The index representing the merged cell group
+     */
+    readonly groupIndex: number;
+
+    /**
+     * The grid's data model
+     */
+    readonly dataModel: DataModel;
   };
 
   /**
