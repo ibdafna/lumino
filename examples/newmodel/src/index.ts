@@ -24,11 +24,11 @@ import '../style/index.css';
 class LargeDataModel extends DataModel {
 
   rowCount(region: DataModel.RowRegion): number {
-    return region === 'body' ? 6 : 2;
+    return region === 'body' ? 6 : 3;
   }
 
   columnCount(region: DataModel.ColumnRegion): number {
-    return region === 'body' ? 6 : 2;
+    return region === 'body' ? 6 : 3;
   }
 
   data(region: DataModel.CellRegion, row: number, column: number): any {
@@ -66,7 +66,7 @@ class LargeDataModel extends DataModel {
     }
 
     if (region === 'row-header') {
-      return [{startRow: 0, startColumn: 0, endRow: 2, endColumn: 0}][groupIndex];
+      return [{startRow: 0, startColumn: 0, endRow: 1, endColumn: 1}][groupIndex];
     }
 
     return null;

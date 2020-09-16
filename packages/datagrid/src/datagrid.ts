@@ -4547,12 +4547,59 @@ class DataGrid extends Widget {
     this._canvasGC.stroke();
   }
 
+  // private _calculateMergeOffsets(regions: DataModel.CellRegion[], axis: 'row' | 'column', 
+  //                                sectionList: SectionList, index: number): [number, number] {
+  //   // const list = axis === 'row' ? this._rowSections : this._columnSections;
+    
+  //   let mergeStartOffset = 0;
+  //   let mergeEndOffset = 0;
+
+  //   let groupsAtAxis: CellGroup[] = [];
+    
+  //   if (axis === 'row') {
+  //     for (const region of regions) {
+  //       groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtRow(region, index));
+  //     }
+  //   } else {
+  //     for (const region of regions) {
+  //       groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtColumn(region, index));
+  //     }
+  //   }
+    
+  //   let minRow = index;
+  //   let maxRow = index;
+    
+  //   for (const group of groupsAtAxis) {
+  //     minRow = Math.min(minRow, group.startRow);
+  //     maxRow = Math.max(maxRow, group.endRow);
+  //   }
+    
+  //   for (let r = index - 1; r >= minRow; r--) {
+  //     mergeStartOffset += sectionList.sizeOf(r);
+  //   }
+    
+  //   for (let r = index + 1; r <= maxRow; r++) {
+  //     mergeEndOffset += sectionList.sizeOf(r);
+  //   }
+    
+  //   return [mergeStartOffset, mergeEndOffset];
+  // } 
+
   private _calculateMergeOffsets(regions: DataModel.CellRegion[], axis: 'row' | 'column', 
                                  sectionList: SectionList, index: number): [number, number] {
     // const list = axis === 'row' ? this._rowSections : this._columnSections;
     
     let mergeStartOffset = 0;
     let mergeEndOffset = 0;
+    let mergedCellGroups: CellGroup[] = [];
+    // let intersectingCellGroups: CellGroup[] = [];
+
+    for (const region of regions) {
+      mergedCellGroups = mergedCellGroups.concat(this._getCellGroupsAtRegion(region));
+
+    }
+
+    // const joinedMergedCellGroup = this._joinCellGroups(mergedCellGroups);
 
     let groupsAtAxis: CellGroup[] = [];
     
@@ -4565,14 +4612,42 @@ class DataGrid extends Widget {
         groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtColumn(region, index));
       }
     }
-    
-    let minRow = index;
-    let maxRow = index;
-    
-    for (const group of groupsAtAxis) {
-      minRow = Math.min(minRow, group.startRow);
-      maxRow = Math.max(maxRow, group.endRow);
+
+    if (groupsAtAxis.length === 0) {
+      return [0,0];
     }
+
+    const _areCellGroupsIntersectingAtAxis = (group1: CellGroup, group2: CellGroup, axis: 'row' | 'column'): boolean => {
+      if (axis === 'row') {
+        return (group1.startRow >= group2.startRow && group1.startRow <= group2.endRow)
+          || (group1.endRow >= group2.startRow && group1.endRow <= group2.endRow)
+          || (group2.startRow >= group1.startRow && group2.startRow <= group1.endRow)
+          || (group2.endRow >= group1.startRow && group2.endRow <= group1.endRow);
+      }
+      return group1.endColumn >= group2.startColumn || group2.endColumn >= group1.startColumn;
+    }
+
+    let joinedGroup = groupsAtAxis[0];
+
+    for (let g = 0; g < mergedCellGroups.length; g++) {
+      const group = mergedCellGroups[g];
+      if (_areCellGroupsIntersectingAtAxis(joinedGroup, group, axis)) {
+        joinedGroup = this._joinCellGroups([group, joinedGroup]);
+        mergedCellGroups.splice(g, 1);
+        g = 0;
+      }
+    }
+    
+    // let minRow = index;
+    // let maxRow = index;
+    
+    // for (const group of groupsAtAxis) {
+    //   minRow = Math.min(minRow, group.startRow);
+    //   maxRow = Math.max(maxRow, group.endRow);
+    // }
+
+    let minRow = joinedGroup.startRow;
+    let maxRow = joinedGroup.endRow;
     
     for (let r = index - 1; r >= minRow; r--) {
       mergeStartOffset += sectionList.sizeOf(r);
@@ -4585,6 +4660,34 @@ class DataGrid extends Widget {
     return [mergeStartOffset, mergeEndOffset];
   } 
 
+  private _getCellGroupsAtRegion(rgn: DataModel.CellRegion): CellGroup[] {
+    let groupsAtRegion: CellGroup[] = []
+    const numGroups = this._dataModel!.groupCount(rgn);
+
+    for (let i = 0; i < numGroups; i++) {
+      const group = this._dataModel!.group(rgn, i)!;
+      groupsAtRegion.push(group);
+    }
+    return groupsAtRegion;
+  }
+
+  private _joinCellGroups(groups: CellGroup[]): CellGroup {
+    let startRow = Number.MAX_VALUE;
+    let endRow = Number.MIN_VALUE;
+    let startColumn = Number.MAX_VALUE;
+    let endColumn = Number.MIN_VALUE;
+
+    for (const group of groups) {
+      startRow = Math.min(startRow, group.startRow);
+      endRow = Math.max(endRow, group.endRow);
+      startColumn = Math.min(startColumn, group.startColumn);
+      endColumn = Math.max(endColumn, group.endColumn);
+    }
+
+    return {startRow, endRow, startColumn, endColumn};
+  }
+
+  //@ts-ignore
   private _getCellGroupsAtRow(rgn: DataModel.CellRegion, row: number): CellGroup[] {
     let groupsAtRow = [];
     const numGroups = this._dataModel!.groupCount(rgn);
@@ -4598,6 +4701,7 @@ class DataGrid extends Widget {
     return groupsAtRow;
   }
 
+  //@ts-ignore
   private _getCellGroupsAtColumn(rgn: DataModel.CellRegion, column: number): CellGroup[] {
     let groupsAtColumn = [];
     const numGroups = this._dataModel!.groupCount(rgn);
