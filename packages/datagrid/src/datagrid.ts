@@ -3324,10 +3324,10 @@ class DataGrid extends Widget {
     let dx = sx + delta;
     let dy = 0;
 
-    // const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['row-header'], 'column', list, index);
+    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['row-header'], 'column', list, index);
 
     // Blit the valid content to the destination.
-    // this._blitContent(this._canvas, sx + mergeEndOffset, sy, sw - mergeEndOffset, sh, dx + mergeEndOffset, dy);
+    this._blitContent(this._canvas, sx + mergeEndOffset, sy, sw - mergeEndOffset, sh, dx + mergeEndOffset, dy);
 
     // Repaint the section if needed.
     // if (newSize > 0 && offset + newSize > hw) {
@@ -3335,12 +3335,12 @@ class DataGrid extends Widget {
     // }
 
     // Blit the valid contents to the destination.
-    this._blitContent(this._canvas, sx, sy, sw, sh, dx, dy);
+    // this._blitContent(this._canvas, sx, sy, sw, sh, dx, dy);
 
     // Repaint the header section if needed.
     if (newSize > 0) {
-      this._paintContent(offset, 0, newSize, vh);
-      // this._paintContent(offset - mergeStartOffset, 0, newSize + mergeStartOffset + mergeEndOffset, vh);
+      // this._paintContent(offset, 0, newSize, vh);
+      this._paintContent(offset - mergeStartOffset, 0, newSize + mergeStartOffset + mergeEndOffset, vh);
     }
 
     // Paint the trailing space as needed.
@@ -4288,7 +4288,6 @@ class DataGrid extends Widget {
       return;
     }
 
-
     // Set up the cell config object for rendering.
     let config = {
       x: 0, y: 0, width: 0, height: 0,
@@ -4328,15 +4327,9 @@ class DataGrid extends Widget {
       config.x = x;
       config.width = width;
       config.column = column;
-
-      // Clear the buffer rect for the column.
-      gc.clearRect(x, rgn.y, width, rgn.height);
-
-      // Save the GC state.
-      gc.save();
-
+      
       // Loop over the rows in the column.
-      for (let y = rgn.y, j = 0, n = rgn.rowSizes.length; j < n; ++j) {
+      for (let y = rgn.y, j = 0, n = rgn.rowSizes.length; j < n; ++j) {        
         // Fetch the size of the row.
         height = rgn.rowSizes[j];
 
@@ -4373,6 +4366,12 @@ class DataGrid extends Widget {
             continue;
           }
         }
+
+        // Clear the buffer rect for the column.
+        gc.clearRect(x, y, width, height);
+
+        // Save the GC state.
+        gc.save();
 
         // Get the value for the cell.
         let value: any;
@@ -4420,17 +4419,18 @@ class DataGrid extends Widget {
         y += yOffset;
       }
 
+      
       // Restore the GC state.
       gc.restore();
-
+      
       // Compute the actual X bounds for the column.
       // let x1 = Math.max(rgn.xMin, x);
       // let x2 = Math.min(x + width - 1, rgn.xMax);
-
+      
       // Compute the actual Y bounds for the cell range.
       // let y1 = Math.max(rgn.yMin, rgn.y);
       // let y2 = Math.min(rgn.y + rgn.height - 1, rgn.yMax);
-
+      
       // Blit the off-screen buffer column into the on-screen canvas.
       // 
       // This is *much* faster than drawing directly into the on-screen
@@ -4438,7 +4438,7 @@ class DataGrid extends Widget {
       // is required to prevent cell renderers from needing to set up a
       // clip rect for handling horizontal overflow text (slow!).
       // this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
-
+      
       // Increment the running X coordinate.
       x += xOffset;
     }
