@@ -51,6 +51,8 @@ class LargeDataModel extends DataModel {
       return 1;
     } else if (region === 'row-header') {
       return 1;
+    } else if (region === 'corner-header') {
+      return 1;
     }
     return 0;
   }
@@ -67,6 +69,10 @@ class LargeDataModel extends DataModel {
     }
 
     if (region === 'row-header') {
+      return [{startRow: 0, startColumn: 0, endRow: 1, endColumn: 1}][groupIndex];
+    }
+
+    if (region === 'corner-header') {
       return [{startRow: 0, startColumn: 0, endRow: 1, endColumn: 1}][groupIndex];
     }
 

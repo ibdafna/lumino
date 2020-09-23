@@ -4345,6 +4345,21 @@ class DataGrid extends Widget {
         
         config.groupIndex = this._getGroupIndex(config.region, row, column);
         yOffset = height;
+
+        const getColumnSize = (region: DataModel.CellRegion, index: number) => {
+          if (region === 'corner-header') {
+            return this._rowHeaderSections.sizeOf(index);
+          }
+          return this.columnSize(region as DataModel.ColumnRegion, index);
+        };
+
+        const getRowSize = (region: DataModel.CellRegion, index: number) => {
+          if (region === 'corner-header') {
+            return this._columnHeaderSections.sizeOf(index);
+          }
+          return this.rowSize(region as DataModel.RowRegion, index);
+        };
+
         /**
          * For merged cell regions, only rendering the merged region
          * if the "parent" cell is the one being painted. Bail otherwise.
@@ -4354,12 +4369,12 @@ class DataGrid extends Widget {
           if (group.startRow === row && group.startColumn === column) {
             width = 0;
             for (let c = group.startColumn; c <= group.endColumn; c++) {
-              width += rgn.columnSizes[c];
+              width += getColumnSize(config.region, c);
             }
 
             height = 0;
             for (let r = group.startRow; r <= group.endRow; r++) {
-              height += rgn.rowSizes[r];
+              height += getRowSize(config.region, r);
             }
           }
           else {
