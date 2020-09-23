@@ -46,7 +46,7 @@ class LargeDataModel extends DataModel {
 
   groupCount(region: DataModel.RowRegion): number {
     if (region === 'body') {
-      return 2;
+      return 3;
     } else if (region === 'column-header') {
       return 1;
     } else if (region === 'row-header') {
@@ -58,7 +58,8 @@ class LargeDataModel extends DataModel {
   group(region: DataModel.CellRegion, groupIndex: number): CellGroup | null {
     if (region === 'body') {
       return [{startRow: 1, startColumn: 1, endRow: 2, endColumn: 2},
-              {startRow: 5, startColumn: 1, endRow: 5, endColumn: 2}][groupIndex];
+              {startRow: 5, startColumn: 1, endRow: 5, endColumn: 2},
+              {startRow: 3, startColumn: 5, endRow: 4, endColumn: 5}][groupIndex];
     }
 
     if (region === 'column-header') {

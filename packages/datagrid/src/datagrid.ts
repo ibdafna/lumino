@@ -3426,12 +3426,14 @@ class DataGrid extends Widget {
     let dx = 0;
     let dy = sy + delta;
 
+    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['column-header'], 'row', list, index);
+
     // Blit the valid contents to the destination.
-    this._blitContent(this._canvas, sx, sy, sw, sh, dx, dy);
+    this._blitContent(this._canvas, sx, sy + mergeEndOffset, sw, sh - mergeEndOffset, dx, dy + mergeEndOffset);
 
     // Repaint the header section if needed.
     if (newSize > 0) {
-      this._paintContent(0, offset, vw, newSize);
+      this._paintContent(0, offset - mergeStartOffset, vw, newSize + mergeStartOffset + mergeEndOffset);
     }
 
     // Paint the trailing space as needed.
