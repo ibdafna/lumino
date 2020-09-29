@@ -3535,9 +3535,80 @@ class DataGrid extends Widget {
       return;
     }
 
+    const regions:DataModel.CellRegion[] = ['body','row-header'];
+    let index = this._rowSections.indexOf(dy < 0 ? this._scrollY : this._scrollY + contentHeight);
+    let [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(regions, 'row', 
+          this._rowSections, index);
+
+    console.log(index, mergeStartOffset, mergeEndOffset);
+
+    let groupsAtAxis: CellGroup[] = [];
+    let axis: 'row' | 'column' = 'row';
+    if (axis === 'row') {
+      for (const region of regions) {
+        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtRow(region, index));
+      }
+    } else {
+      for (const region of regions) {
+        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtColumn(region, index));
+      }
+    }
+
+    const _isCellGroupAbove = (group1: CellGroup, group2: CellGroup): boolean => {
+      return group2.endRow >= group1.startRow;
+    };
+
+    const _isCellGroupBelow = (group1: CellGroup, group2: CellGroup): boolean => {
+      return group2.startRow <= group1.endRow;
+    };
+
+    let borderY = this._rowSections.offsetOf(index) - this._scrollY;
+    
+    if (groupsAtAxis.length > 0) {
+      let mergedGroupAtAxis:CellGroup = this._joinCellGroups(groupsAtAxis);
+      let mergedCellGroups: CellGroup[] = [];
+      for (const region of regions) {
+        mergedCellGroups = mergedCellGroups.concat(this._getCellGroupsAtRegion(region));
+      }
+      
+      for (let g = 0; g < mergedCellGroups.length; g++) {
+        const group = mergedCellGroups[g];
+
+        // Scrolling down
+        if (dy > 0) {
+           if (!_isCellGroupAbove(mergedGroupAtAxis, group)) {
+             continue;
+           }
+        } else {
+          if (!_isCellGroupBelow(mergedGroupAtAxis, group)) {
+            continue;
+          }
+        }
+
+        if (this._areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, axis)) {
+          mergedGroupAtAxis = this._joinCellGroups([group, mergedGroupAtAxis]);
+          mergedCellGroups.splice(g, 1);
+          g = 0;
+        }
+      }
+      console.log("merged group at axis", mergedGroupAtAxis);
+      if (mergedGroupAtAxis.startRow !== Number.MAX_VALUE) {
+        if (dy > 0) {
+          borderY = this._rowSections.offsetOf(mergedGroupAtAxis.startRow) - this._scrollY;
+        } else {
+          borderY = this._rowSections.offsetOf(mergedGroupAtAxis.endRow);
+        }
+      }
+    }
+
+    console.log("borderY",borderY, "scrollY", this._scrollY);
+    
+    const prevScrollY = this._scrollY;
+
     // Update the internal Y scroll position.
     this._scrollY = y;
 
+    console.log("contentY", contentY, "contentHeight", contentHeight, "dy", dy);
     // Scroll the Y axis if needed. If the scroll distance exceeds
     // the visible height, paint everything. Otherwise, blit the
     // valid content and paint the dirty region.
@@ -3545,13 +3616,56 @@ class DataGrid extends Widget {
       if (Math.abs(dy) >= contentHeight) {
         this._paintContent(0, contentY, width, contentHeight);
       } else {
-        let x = 0;
-        let y = dy < 0 ? contentY : contentY + dy;
-        let w = width;
-        let h = contentHeight - Math.abs(dy);
-        this._blitContent(this._canvas, x, y, w, h, x, y - dy);
-        this._paintContent(0, dy < 0 ? contentY : height - dy, width, Math.abs(dy));
+        // Scrolling down
+        if (dy > 0) {
+          // let x = 0;
+          // let y = dy < 0 ? contentY : contentY + dy;
+          // let w = width;
+          // let h = contentHeight - Math.abs(dy);
+  
+          this._blitContent(this._canvas, 0, contentY + dy, width, borderY, 0, contentY);
+          this._paintContent(0, contentY + borderY - dy, width, contentHeight - borderY + dy);
+        } else {
+          this._blitContent(this._canvas, 0, 
+            contentY + borderY - prevScrollY, width, contentHeight - borderY + prevScrollY, 
+            0, 
+            contentY + borderY - prevScrollY - dy);
+          // this._paintContent(0, contentY + borderY, width, 20);
+          this._paintContent(0, contentY, width, borderY - y - dy);
+        }
+        // let x = 0;
+        // let y = dy < 0 ? contentY : contentY + dy;
+        // let w = width;
+        // let h = contentHeight - Math.abs(dy);
+
+        // this._blitContent(this._canvas, x, y, w, h, x, y - dy);
+        // this._paintContent(0, dy < 0 ? contentY : height - dy, width, Math.abs(dy));
+        
+        // this._blitContent(this._canvas, x, y + mergeEndOffset, w, h - mergeEndOffset, x, y - dy + mergeEndOffset);
+        // this._paintContent(
+        //   0, 
+        //   (dy < 0 ? contentY : height - dy - mergeStartOffset), 
+        //   width, 
+        //   Math.abs(dy) /*+ mergeStartOffset + mergeEndOffset*/);
       }
+
+      // console.log("blit", x, y, w, h, x, y - dy);
+      // console.log("paint", 0, dy < 0 ? contentY : height - dy, width, Math.abs(dy));
+      // console.log("values", dy, contentY, width, contentHeight);
+
+      // const size = w/2;
+      // this._canvasGC.save()
+      // this._canvasGC.lineWidth = 2;
+      // this._canvasGC.fillStyle = "rgba(255,0,0,0.1)";
+      // this._canvasGC.fillRect(x, y + mergeEndOffset, size, h - mergeEndOffset);
+      // this._canvasGC.fillStyle = "rgba(0,255,0,0.05)";
+      // this._canvasGC.fillRect(x+size, y - dy + mergeEndOffset, size, h - mergeEndOffset);
+      // this._canvasGC.fillStyle = "rgba(0,0,255,0.05)";
+      // this._canvasGC.fillRect(0, 
+      //   (dy < 0 ? contentY : height - dy - mergeStartOffset), 
+      //   width, 
+      //   Math.abs(dy) + mergeStartOffset + mergeEndOffset);
+      // this._canvasGC.restore()
     }
 
     // Update the internal X scroll position.
@@ -4634,21 +4748,11 @@ class DataGrid extends Widget {
       return [0,0];
     }
 
-    const _areCellGroupsIntersectingAtAxis = (group1: CellGroup, group2: CellGroup, axis: 'row' | 'column'): boolean => {
-      if (axis === 'row') {
-        return (group1.startRow >= group2.startRow && group1.startRow <= group2.endRow)
-          || (group1.endRow >= group2.startRow && group1.endRow <= group2.endRow)
-          || (group2.startRow >= group1.startRow && group2.startRow <= group1.endRow)
-          || (group2.endRow >= group1.startRow && group2.endRow <= group1.endRow);
-      }
-      return group1.endColumn >= group2.startColumn || group2.endColumn >= group1.startColumn;
-    }
-
     let joinedGroup = groupsAtAxis[0];
 
     for (let g = 0; g < mergedCellGroups.length; g++) {
       const group = mergedCellGroups[g];
-      if (_areCellGroupsIntersectingAtAxis(joinedGroup, group, axis)) {
+      if (this._areCellGroupsIntersectingAtAxis(joinedGroup, group, axis)) {
         joinedGroup = this._joinCellGroups([group, joinedGroup]);
         mergedCellGroups.splice(g, 1);
         g = 0;
@@ -4676,6 +4780,16 @@ class DataGrid extends Widget {
     
     return [mergeStartOffset, mergeEndOffset];
   } 
+
+  private _areCellGroupsIntersectingAtAxis(group1: CellGroup, group2: CellGroup, axis: 'row' | 'column'): boolean {
+    if (axis === 'row') {
+      return (group1.startRow >= group2.startRow && group1.startRow <= group2.endRow)
+        || (group1.endRow >= group2.startRow && group1.endRow <= group2.endRow)
+        || (group2.startRow >= group1.startRow && group2.startRow <= group1.endRow)
+        || (group2.endRow >= group1.startRow && group2.endRow <= group1.endRow);
+    }
+    return group1.endColumn >= group2.startColumn || group2.endColumn >= group1.startColumn;
+  }
 
   private _getCellGroupsAtRegion(rgn: DataModel.CellRegion): CellGroup[] {
     let groupsAtRegion: CellGroup[] = []
