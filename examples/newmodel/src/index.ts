@@ -24,7 +24,7 @@ import '../style/index.css';
 class LargeDataModel extends DataModel {
 
   rowCount(region: DataModel.RowRegion): number {
-    return region === 'body' ? 6 : 3;
+    return region === 'body' ? 20 : 3;
   }
 
   columnCount(region: DataModel.ColumnRegion): number {

@@ -3459,19 +3459,21 @@ class DataGrid extends Widget {
     // Floor and clamp the position to the allowable range.
     x = Math.max(0, Math.min(Math.floor(x), this.maxScrollX));
     y = Math.max(0, Math.min(Math.floor(y), this.maxScrollY));
-
+    
     // Synchronize the scroll bar values.
     this._hScrollBar.value = x;
     this._vScrollBar.value = y;
-
+    
     // Compute the delta scroll amount.
     let dx = x - this._scrollX;
     let dy = y - this._scrollY;
-
+    
     // Bail early if there is no effective scroll.
     if (dx === 0 && dy === 0) {
       return;
     }
+
+    console.log("----------------------------------");
 
     // Bail early if the viewport is not visible.
     if (!this._viewport.isVisible) {
@@ -3540,7 +3542,8 @@ class DataGrid extends Widget {
     let [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(regions, 'row', 
           this._rowSections, index);
 
-    console.log(index, mergeStartOffset, mergeEndOffset);
+    console.log("dy", dy);
+    console.log("index", index, "mergeStartOffset", mergeStartOffset, "mergeEndOffset", mergeEndOffset);
 
     let groupsAtAxis: CellGroup[] = [];
     let axis: 'row' | 'column' = 'row';
@@ -3562,7 +3565,10 @@ class DataGrid extends Widget {
       return group2.startRow <= group1.endRow;
     };
 
-    let borderY = this._rowSections.offsetOf(index) - this._scrollY;
+    let borderY = dy > 0 ?
+      (this._rowSections.offsetOf(index) - this._scrollY) : 
+      this._rowSections.offsetOf(index + 1);
+    
     
     if (groupsAtAxis.length > 0) {
       let mergedGroupAtAxis:CellGroup = this._joinCellGroups(groupsAtAxis);
@@ -3596,17 +3602,22 @@ class DataGrid extends Widget {
         if (dy > 0) {
           borderY = this._rowSections.offsetOf(mergedGroupAtAxis.startRow) - this._scrollY;
         } else {
-          borderY = this._rowSections.offsetOf(mergedGroupAtAxis.endRow);
+          borderY = this._rowSections.offsetOf(mergedGroupAtAxis.endRow + 1);
         }
       }
+    } else {
+      console.log("no groupsAtAxis");
     }
 
-    console.log("borderY",borderY, "scrollY", this._scrollY);
+    console.log("borderY", borderY, "scrollY", this._scrollY, "->", y);
     
     const prevScrollY = this._scrollY;
 
     // Update the internal Y scroll position.
     this._scrollY = y;
+
+    let blitSrcX, blitSrcY, blitDstX, blitDstY, blitWidth, blitHeight;
+    let paintX, paintY, paintWidth, paintHeight;
 
     console.log("contentY", contentY, "contentHeight", contentHeight, "dy", dy);
     // Scroll the Y axis if needed. If the scroll distance exceeds
@@ -3622,17 +3633,53 @@ class DataGrid extends Widget {
           // let y = dy < 0 ? contentY : contentY + dy;
           // let w = width;
           // let h = contentHeight - Math.abs(dy);
+
+          blitSrcX = 0;
+          blitSrcY = contentY + dy;
+          blitDstX = 0;
+          blitDstY = contentY;
+          blitWidth = width;
+          blitHeight = borderY - dy;
+          paintX = 0;
+          paintY = contentY + borderY - dy;
+          paintWidth = width;
+          paintHeight = contentHeight - borderY + dy;
   
-          this._blitContent(this._canvas, 0, contentY + dy, width, borderY, 0, contentY);
-          this._paintContent(0, contentY + borderY - dy, width, contentHeight - borderY + dy);
+          this._blitContent(this._canvas, blitSrcX, blitSrcY, blitWidth, blitHeight, blitDstX, blitDstY);
+          this._paintContent(paintX, paintY, paintWidth, paintHeight);
         } else {
-          this._blitContent(this._canvas, 0, 
-            contentY + borderY - prevScrollY, width, contentHeight - borderY + prevScrollY, 
-            0, 
-            contentY + borderY - prevScrollY - dy);
+          blitSrcX = 0;
+          blitSrcY = contentY + borderY - prevScrollY;
+          blitDstX = 0;
+          blitDstY = contentY + borderY - prevScrollY - dy;
+          blitWidth = width;
+          blitHeight = contentHeight - borderY + prevScrollY;
+          paintX = 0;
+          paintY = contentY;
+          paintWidth = width;
+          paintHeight = borderY - prevScrollY - dy;
+
+          this._blitContent(this._canvas, blitSrcX, blitSrcY, blitWidth, blitHeight, blitDstX, blitDstY);
           // this._paintContent(0, contentY + borderY, width, 20);
-          this._paintContent(0, contentY, width, borderY - y - dy);
+          this._paintContent(paintX, paintY, paintWidth, paintHeight);
         }
+
+        console.log("Blit rect: src left:", blitSrcX, "src top:", blitSrcY, "dst left:", blitDstX, "dst top:", blitDstY, "width:", blitWidth, "height:", blitHeight);
+        console.log("Paint rect: left:", paintX, "top:", paintY, "width:", paintWidth, "height:", paintHeight);
+
+        if (dy < 0) {
+          const size = blitWidth / 3;
+          this._canvasGC.save()
+          this._canvasGC.lineWidth = 1;
+          this._canvasGC.fillStyle = "rgba(255,0,0,0.1)";
+          this._canvasGC.fillRect(blitSrcX, blitSrcY, size, blitHeight);
+          this._canvasGC.fillStyle = "rgba(0,255,0,0.05)";
+          this._canvasGC.fillRect(blitSrcX + size, blitDstY, size, blitHeight);
+          this._canvasGC.fillStyle = "rgba(0,0,255,0.05)";
+          this._canvasGC.fillRect(blitSrcX + 2 * size, paintY, paintWidth, paintHeight);
+          this._canvasGC.restore();
+        }
+
         // let x = 0;
         // let y = dy < 0 ? contentY : contentY + dy;
         // let w = width;
@@ -4555,12 +4602,12 @@ class DataGrid extends Widget {
       gc.restore();
       
       // Compute the actual X bounds for the column.
-      // let x1 = Math.max(rgn.xMin, x);
-      // let x2 = Math.min(x + width - 1, rgn.xMax);
+      let x1 = Math.max(rgn.xMin, x);
+      let x2 = Math.min(x + width - 1, rgn.xMax);
       
       // Compute the actual Y bounds for the cell range.
-      // let y1 = Math.max(rgn.yMin, rgn.y);
-      // let y2 = Math.min(rgn.y + rgn.height - 1, rgn.yMax);
+      let y1 = Math.max(rgn.yMin, rgn.y);
+      let y2 = Math.min(rgn.y + rgn.height - 1, rgn.yMax);
       
       // Blit the off-screen buffer column into the on-screen canvas.
       // 
@@ -4568,13 +4615,13 @@ class DataGrid extends Widget {
       // canvas with a clip rect on the column. Managed column clipping
       // is required to prevent cell renderers from needing to set up a
       // clip rect for handling horizontal overflow text (slow!).
-      // this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+      this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
       
       // Increment the running X coordinate.
       x += xOffset;
     }
 
-    this._blitContent(this._buffer, rgn.xMin, rgn.yMin, rgn.width, rgn.height, rgn.xMin, rgn.yMin);
+    // this._blitContent(this._buffer, rgn.xMin, rgn.yMin, rgn.width, rgn.height, rgn.xMin, rgn.yMin);
 
     // Dispose of the wrapped gc.
     gc.dispose();
