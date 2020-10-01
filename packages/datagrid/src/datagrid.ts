@@ -3660,7 +3660,6 @@ class DataGrid extends Widget {
           paintHeight = borderY - prevScrollY - dy;
 
           this._blitContent(this._canvas, blitSrcX, blitSrcY, blitWidth, blitHeight, blitDstX, blitDstY);
-          // this._paintContent(0, contentY + borderY, width, 20);
           this._paintContent(paintX, paintY, paintWidth, paintHeight);
         }
 
@@ -4545,7 +4544,7 @@ class DataGrid extends Widget {
           }
         }
 
-        // Clear the buffer rect for the column.
+        // Clear the buffer rect for the cell.
         gc.clearRect(x, y, width, height);
 
         // Save the GC state.
@@ -4593,6 +4592,15 @@ class DataGrid extends Widget {
         // Restore the GC state.
         gc.restore();
 
+        // Compute the actual X bounds for the cell.
+        let x1 = Math.max(rgn.xMin, config.x);
+        let x2 = Math.min(config.x + config.width - 1, rgn.xMax);
+        
+        // Compute the actual Y bounds for the cell.
+        let y1 = Math.max(rgn.yMin, config.y);
+        let y2 = Math.min(config.y + config.height - 1, rgn.yMax);
+        this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+
         // Increment the running Y coordinate.
         y += yOffset;
       }
@@ -4602,21 +4610,21 @@ class DataGrid extends Widget {
       gc.restore();
       
       // Compute the actual X bounds for the column.
-      let x1 = Math.max(rgn.xMin, x);
-      let x2 = Math.min(x + width - 1, rgn.xMax);
+      // let x1 = Math.max(rgn.xMin, x);
+      // let x2 = Math.min(x + width - 1, rgn.xMax);
       
-      // Compute the actual Y bounds for the cell range.
-      let y1 = Math.max(rgn.yMin, rgn.y);
-      let y2 = Math.min(rgn.y + rgn.height - 1, rgn.yMax);
+      // // Compute the actual Y bounds for the cell range.
+      // let y1 = Math.max(rgn.yMin, rgn.y);
+      // let y2 = Math.min(rgn.y + rgn.height - 1, rgn.yMax);
       
       // Blit the off-screen buffer column into the on-screen canvas.
       // 
       // This is *much* faster than drawing directly into the on-screen
       // canvas with a clip rect on the column. Managed column clipping
       // is required to prevent cell renderers from needing to set up a
-      // clip rect for handling horizontal overflow text (slow!).
-      this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
-      
+      // clip rect for handling horizontal overflow text (slow!).     
+      // this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+     
       // Increment the running X coordinate.
       x += xOffset;
     }
