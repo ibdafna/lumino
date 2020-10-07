@@ -4450,6 +4450,21 @@ class DataGrid extends Widget {
       return;
     }
 
+    const [mergeStartOffset, mergeEndOffset, joinedGroup] = this._calculateMergeOffsets(['body'], 'row', this._rowSections, rgn.row);
+    
+    rgn = JSON.parse(JSON.stringify(rgn));
+
+    if (joinedGroup.startRow !== -1 && rgn.region === 'body') {
+      rgn.y -= mergeStartOffset;
+      for (let r = joinedGroup.startRow; r < rgn.row; r++) {
+        rgn.rowSizes = [this._rowSections.sizeOf(r)].concat(rgn.rowSizes);
+      }
+      rgn.row = joinedGroup.startRow;
+    }
+
+    console.log("Region ", rgn);
+    console.log("calculateMergeOffsets: ", mergeStartOffset, mergeEndOffset, joinedGroup);
+
     // Set up the cell config object for rendering.
     let config = {
       x: 0, y: 0, width: 0, height: 0,
@@ -4600,6 +4615,7 @@ class DataGrid extends Widget {
         let y1 = Math.max(rgn.yMin, config.y);
         let y2 = Math.min(config.y + config.height - 1, rgn.yMax);
         this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+        // console.log("blit: ", x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
 
         // Increment the running Y coordinate.
         y += yOffset;
@@ -4772,7 +4788,7 @@ class DataGrid extends Widget {
   // } 
 
   private _calculateMergeOffsets(regions: DataModel.CellRegion[], axis: 'row' | 'column', 
-                                 sectionList: SectionList, index: number): [number, number] {
+                                 sectionList: SectionList, index: number): [number, number, CellGroup] {
     // const list = axis === 'row' ? this._rowSections : this._columnSections;
     
     let mergeStartOffset = 0;
@@ -4800,7 +4816,7 @@ class DataGrid extends Widget {
     }
 
     if (groupsAtAxis.length === 0) {
-      return [0,0];
+      return [0,0, {startRow:-1, endRow: -1, startColumn:-1, endColumn:-1}];
     }
 
     let joinedGroup = groupsAtAxis[0];
@@ -4833,7 +4849,7 @@ class DataGrid extends Widget {
       mergeEndOffset += sectionList.sizeOf(r);
     }
     
-    return [mergeStartOffset, mergeEndOffset];
+    return [mergeStartOffset, mergeEndOffset, joinedGroup];
   } 
 
   private _areCellGroupsIntersectingAtAxis(group1: CellGroup, group2: CellGroup, axis: 'row' | 'column'): boolean {
