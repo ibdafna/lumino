@@ -32,8 +32,12 @@ import {
 } from './cellrenderer';
 
 import {
-  DataModel, MutableDataModel, CellGroup
+  DataModel, MutableDataModel
 } from './datamodel';
+
+import {
+  CellGroup
+} from './cellgroup';
 
 import {
   GraphicsContext
@@ -1662,6 +1666,7 @@ class DataGrid extends Widget {
 
     // Coerce the selections to an array.
     let selections = toArray(selectionModel.selections());
+    console.log(selections);
 
     // Bail early if there are no selections.
     if (selections.length === 0) {
@@ -3119,7 +3124,7 @@ class DataGrid extends Widget {
       dy = sy + delta;
     }
 
-    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['body','row-header'], 'row', list, index);
+    const [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, ['body','row-header'], 'row', list, index);
 
     // Blit the valid content to the destination.
     this._blitContent(this._canvas, sx, sy + mergeEndOffset, sw, sh - mergeEndOffset, dx, dy + mergeEndOffset);
@@ -3233,7 +3238,7 @@ class DataGrid extends Widget {
       dx = sx + delta;
     }
 
-    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['body','column-header'], 'column', list, index);
+    const [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, ['body','column-header'], 'column', list, index);
 
     // Blit the valid content to the destination.
     this._blitContent(this._canvas, sx + mergeEndOffset, sy, sw - mergeEndOffset, sh, dx + mergeEndOffset, dy);
@@ -3324,7 +3329,7 @@ class DataGrid extends Widget {
     let dx = sx + delta;
     let dy = 0;
 
-    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['row-header'], 'column', list, index);
+    const [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, ['row-header'], 'column', list, index);
 
     // Blit the valid content to the destination.
     this._blitContent(this._canvas, sx + mergeEndOffset, sy, sw - mergeEndOffset, sh, dx + mergeEndOffset, dy);
@@ -3426,7 +3431,7 @@ class DataGrid extends Widget {
     let dx = 0;
     let dy = sy + delta;
 
-    const [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(['column-header'], 'row', list, index);
+    const [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, ['column-header'], 'row', list, index);
 
     // Blit the valid contents to the destination.
     this._blitContent(this._canvas, sx, sy + mergeEndOffset, sw, sh - mergeEndOffset, dx, dy + mergeEndOffset);
@@ -3539,7 +3544,7 @@ class DataGrid extends Widget {
 
     const regions:DataModel.CellRegion[] = ['body','row-header'];
     let index = this._rowSections.indexOf(dy < 0 ? this._scrollY : this._scrollY + contentHeight);
-    let [mergeStartOffset, mergeEndOffset] = this._calculateMergeOffsets(regions, 'row', 
+    let [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, regions, 'row', 
           this._rowSections, index);
 
     console.log("dy", dy);
@@ -3549,11 +3554,11 @@ class DataGrid extends Widget {
     let axis: 'row' | 'column' = 'row';
     if (axis === 'row') {
       for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtRow(region, index));
+        groupsAtAxis = groupsAtAxis.concat(CellGroup.getCellGroupsAtRow(this.dataModel!, region, index));
       }
     } else {
       for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtColumn(region, index));
+        groupsAtAxis = groupsAtAxis.concat(CellGroup.getCellGroupsAtColumn(this.dataModel!, region, index));
       }
     }
 
@@ -3571,10 +3576,10 @@ class DataGrid extends Widget {
     
     
     if (groupsAtAxis.length > 0) {
-      let mergedGroupAtAxis:CellGroup = this._joinCellGroups(groupsAtAxis);
+      let mergedGroupAtAxis:CellGroup = CellGroup.joinCellGroups(groupsAtAxis);
       let mergedCellGroups: CellGroup[] = [];
       for (const region of regions) {
-        mergedCellGroups = mergedCellGroups.concat(this._getCellGroupsAtRegion(region));
+        mergedCellGroups = mergedCellGroups.concat(CellGroup.getCellGroupsAtRegion(this.dataModel!, region));
       }
       
       for (let g = 0; g < mergedCellGroups.length; g++) {
@@ -3591,8 +3596,8 @@ class DataGrid extends Widget {
           }
         }
 
-        if (this._areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, axis)) {
-          mergedGroupAtAxis = this._joinCellGroups([group, mergedGroupAtAxis]);
+        if (CellGroup.areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, axis)) {
+          mergedGroupAtAxis = CellGroup.joinCellGroups([group, mergedGroupAtAxis]);
           mergedCellGroups.splice(g, 1);
           g = 0;
         }
@@ -4450,7 +4455,7 @@ class DataGrid extends Widget {
       return;
     }
 
-    const [mergeStartOffset, mergeEndOffset, joinedGroup] = this._calculateMergeOffsets(['body'], 'row', this._rowSections, rgn.row);
+    const [mergeStartOffset, mergeEndOffset, joinedGroup] = CellGroup.calculateMergeOffsets(this.dataModel!, ['body'], 'row', this._rowSections, rgn.row);
     
     rgn = JSON.parse(JSON.stringify(rgn));
 
@@ -4707,7 +4712,7 @@ class DataGrid extends Widget {
         const cellUp = [rgn.row + j, c];
         const cellDown = [rgn.row + j + 1, c];
 
-        if (this._areCellsMerged(rgn.region, cellUp, cellDown)) {
+        if (CellGroup.areCellsMerged(this.dataModel!, rgn.region, cellUp, cellDown)) {
           if (lineStarted) {
             lines.push([xStart, leftCurrent]);
           }
@@ -4787,152 +4792,7 @@ class DataGrid extends Widget {
   //   return [mergeStartOffset, mergeEndOffset];
   // } 
 
-  private _calculateMergeOffsets(regions: DataModel.CellRegion[], axis: 'row' | 'column', 
-                                 sectionList: SectionList, index: number): [number, number, CellGroup] {
-    // const list = axis === 'row' ? this._rowSections : this._columnSections;
-    
-    let mergeStartOffset = 0;
-    let mergeEndOffset = 0;
-    let mergedCellGroups: CellGroup[] = [];
-    // let intersectingCellGroups: CellGroup[] = [];
 
-    for (const region of regions) {
-      mergedCellGroups = mergedCellGroups.concat(this._getCellGroupsAtRegion(region));
-
-    }
-
-    // const joinedMergedCellGroup = this._joinCellGroups(mergedCellGroups);
-
-    let groupsAtAxis: CellGroup[] = [];
-    
-    if (axis === 'row') {
-      for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtRow(region, index));
-      }
-    } else {
-      for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(this._getCellGroupsAtColumn(region, index));
-      }
-    }
-
-    if (groupsAtAxis.length === 0) {
-      return [0,0, {startRow:-1, endRow: -1, startColumn:-1, endColumn:-1}];
-    }
-
-    let joinedGroup = groupsAtAxis[0];
-
-    for (let g = 0; g < mergedCellGroups.length; g++) {
-      const group = mergedCellGroups[g];
-      if (this._areCellGroupsIntersectingAtAxis(joinedGroup, group, axis)) {
-        joinedGroup = this._joinCellGroups([group, joinedGroup]);
-        mergedCellGroups.splice(g, 1);
-        g = 0;
-      }
-    }
-    
-    // let minRow = index;
-    // let maxRow = index;
-    
-    // for (const group of groupsAtAxis) {
-    //   minRow = Math.min(minRow, group.startRow);
-    //   maxRow = Math.max(maxRow, group.endRow);
-    // }
-
-    let minRow = joinedGroup.startRow;
-    let maxRow = joinedGroup.endRow;
-    
-    for (let r = index - 1; r >= minRow; r--) {
-      mergeStartOffset += sectionList.sizeOf(r);
-    }
-    
-    for (let r = index + 1; r <= maxRow; r++) {
-      mergeEndOffset += sectionList.sizeOf(r);
-    }
-    
-    return [mergeStartOffset, mergeEndOffset, joinedGroup];
-  } 
-
-  private _areCellGroupsIntersectingAtAxis(group1: CellGroup, group2: CellGroup, axis: 'row' | 'column'): boolean {
-    if (axis === 'row') {
-      return (group1.startRow >= group2.startRow && group1.startRow <= group2.endRow)
-        || (group1.endRow >= group2.startRow && group1.endRow <= group2.endRow)
-        || (group2.startRow >= group1.startRow && group2.startRow <= group1.endRow)
-        || (group2.endRow >= group1.startRow && group2.endRow <= group1.endRow);
-    }
-    return group1.endColumn >= group2.startColumn || group2.endColumn >= group1.startColumn;
-  }
-
-  private _getCellGroupsAtRegion(rgn: DataModel.CellRegion): CellGroup[] {
-    let groupsAtRegion: CellGroup[] = []
-    const numGroups = this._dataModel!.groupCount(rgn);
-
-    for (let i = 0; i < numGroups; i++) {
-      const group = this._dataModel!.group(rgn, i)!;
-      groupsAtRegion.push(group);
-    }
-    return groupsAtRegion;
-  }
-
-  private _joinCellGroups(groups: CellGroup[]): CellGroup {
-    let startRow = Number.MAX_VALUE;
-    let endRow = Number.MIN_VALUE;
-    let startColumn = Number.MAX_VALUE;
-    let endColumn = Number.MIN_VALUE;
-
-    for (const group of groups) {
-      startRow = Math.min(startRow, group.startRow);
-      endRow = Math.max(endRow, group.endRow);
-      startColumn = Math.min(startColumn, group.startColumn);
-      endColumn = Math.max(endColumn, group.endColumn);
-    }
-
-    return {startRow, endRow, startColumn, endColumn};
-  }
-
-  //@ts-ignore
-  private _getCellGroupsAtRow(rgn: DataModel.CellRegion, row: number): CellGroup[] {
-    let groupsAtRow = [];
-    const numGroups = this._dataModel!.groupCount(rgn);
-
-    for (let i = 0; i < numGroups; i++) {
-      const group = this._dataModel!.group(rgn, i)!;
-      if (row >= group.startRow && row <= group.endRow) {
-        groupsAtRow.push(group);
-      }
-    }
-    return groupsAtRow;
-  }
-
-  //@ts-ignore
-  private _getCellGroupsAtColumn(rgn: DataModel.CellRegion, column: number): CellGroup[] {
-    let groupsAtColumn = [];
-    const numGroups = this._dataModel!.groupCount(rgn);
-
-    for (let i = 0; i < numGroups; i++) {
-      const group = this._dataModel!.group(rgn, i)!;
-      if (column >= group.startColumn && column <= group.endColumn) {
-        groupsAtColumn.push(group);
-      }
-    }
-    return groupsAtColumn;
-  }
-
-  private _areCellsMerged(rgn: DataModel.CellRegion, cell1: number[], cell2: number[]): boolean {
-    const numGroups = this._dataModel!.groupCount(rgn);
-    const [row1, column1] = cell1;
-    const [row2, column2] = cell2;
-
-    for (let i = 0; i < numGroups; i++) {
-      const group = this._dataModel!.group(rgn, i)!;
-      if (row1 >= group.startRow && row1 <= group.endRow && 
-          column1 >= group.startColumn && column1 <= group.endColumn &&
-          row2 >= group.startRow && row2 <= group.endRow && 
-          column2 >= group.startColumn && column2 <= group.endColumn) {
-            return true;
-          }
-    }
-    return false;
-  }
 
   /**
    * Draw the vertical grid lines for the given paint region.
@@ -4987,7 +4847,7 @@ class DataGrid extends Widget {
         const cellLeft = [r, rgn.column + i];
         const cellRight = [r, rgn.column + i + 1];
 
-        if (this._areCellsMerged(rgn.region, cellLeft, cellRight)) {
+        if (CellGroup.areCellsMerged(this.dataModel!, rgn.region, cellLeft, cellRight)) {
           if (lineStarted) {
             lines.push([yStart, topCurrent]);
           }
@@ -5141,6 +5001,17 @@ class DataGrid extends Widget {
         sc1 = sc2;
         sc2 = tmp;
       }
+
+      const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(
+        this.dataModel!,
+        {startRow: sr1, endRow: sr2, startColumn: sc1, endColumn: sc2},
+        "body"
+      );
+
+      sr1 = joinedGroup.startRow;
+      sr2 = joinedGroup.endRow;
+      sc1 = joinedGroup.startColumn;
+      sc2 = joinedGroup.endColumn;
 
       // Convert to pixel coordinates.
       let x1 = this._columnSections.offsetOf(sc1) - sx + hw;
@@ -5408,20 +5279,34 @@ class DataGrid extends Widget {
     }
 
     // Fetch the cursor location.
-    let row = model.cursorRow;
-    let column = model.cursorColumn;
+    let startRow = model.cursorRow;
+    let startColumn = model.cursorColumn;
 
     // Fetch the max row and column.
     let maxRow = this._rowSections.count - 1;
     let maxColumn = this._columnSections.count - 1;
 
     // Bail early if the cursor is out of bounds.
-    if (row < 0 || row > maxRow) {
+    if (startRow < 0 || startRow > maxRow) {
       return;
     }
-    if (column < 0 || column > maxColumn) {
+    if (startColumn < 0 || startColumn > maxColumn) {
       return;
     }
+
+    let endRow = startRow;
+    let endColumn = startColumn;
+
+    const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(
+      this.dataModel!,
+      {startRow, endRow, startColumn, endColumn},
+      "body"
+    );
+
+    startRow = joinedGroup.startRow;
+    endRow = joinedGroup.endRow;
+    startColumn = joinedGroup.startColumn;
+    endColumn = joinedGroup.endColumn;
 
     // Fetch geometry.
     let sx = this._scrollX;
@@ -5436,18 +5321,18 @@ class DataGrid extends Widget {
     let vh = this._viewportHeight;
 
     // Get the cursor bounds in viewport coordinates.
-    let x1 = this._columnSections.offsetOf(column) - sx + hw;
-    let x2 = this._columnSections.extentOf(column) - sx + hw;
-    let y1 = this._rowSections.offsetOf(row) - sy + hh;
-    let y2 = this._rowSections.extentOf(row) - sy + hh;
+    let x1 = this._columnSections.offsetOf(startColumn) - sx + hw;
+    let x2 = this._columnSections.extentOf(endColumn) - sx + hw;
+    let y1 = this._rowSections.offsetOf(startRow) - sy + hh;
+    let y2 = this._rowSections.extentOf(endRow) - sy + hh;
 
     // Adjust the trailing X coordinate for column stretch.
-    if (this._stretchLastColumn && pw > bw && column === maxColumn) {
+    if (this._stretchLastColumn && pw > bw && startColumn === maxColumn) {
       x2 = vw - 1;
     }
 
     // Adjust the trailing Y coordinate for row stretch.
-    if (this._stretchLastRow && ph > bh && row === maxRow) {
+    if (this._stretchLastRow && ph > bh && startRow === maxRow) {
       y2 = vh - 1;
     }
 

@@ -11,13 +11,9 @@ import {
   ISignal, Signal
 } from '@lumino/signaling';
 
-export interface CellGroup {
-  startRow: number;
-  endRow: number;
-  startColumn: number;
-  endColumn: number;
-}
-
+import {
+  CellGroup
+} from './cellgroup';
 /**
  * An object which provides the data for a data grid.
  *

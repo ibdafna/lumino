@@ -11,8 +11,12 @@ import 'es6-promise/auto';  // polyfill Promise on IE
 
 import {
   BasicKeyHandler, BasicMouseHandler, BasicSelectionModel,
-  DataGrid, DataModel, JSONModel, CellGroup
+  DataGrid, DataModel, JSONModel
 } from '../../../packages/datagrid/src/index';
+
+import {
+  CellGroup
+} from '../../../packages/datagrid/src/cellgroup';
 
 import {
   DockPanel, Widget
