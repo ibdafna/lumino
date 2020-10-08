@@ -60,6 +60,9 @@ import {
   CellEditorController
 } from './celleditorcontroller';
 
+import {
+  JSONExt
+} from '@lumino/coreutils';
 
 /**
  * A widget which implements a high-performance tabular data grid.
@@ -4455,20 +4458,28 @@ class DataGrid extends Widget {
       return;
     }
 
-    const [mergeStartOffset, mergeEndOffset, joinedGroup] = CellGroup.calculateMergeOffsets(this.dataModel!, ['body'], 'row', this._rowSections, rgn.row);
-    
-    rgn = JSON.parse(JSON.stringify(rgn));
+    // move the bounds of the region if edges of the region are part of a merge group.
+    // after the move, new region contains entirety of the merge groups
+    rgn = JSONExt.deepCopy(rgn);
 
-    if (joinedGroup.startRow !== -1 && rgn.region === 'body') {
-      rgn.y -= mergeStartOffset;
-      for (let r = joinedGroup.startRow; r < rgn.row; r++) {
-        rgn.rowSizes = [this._rowSections.sizeOf(r)].concat(rgn.rowSizes);
-      }
-      rgn.row = joinedGroup.startRow;
+    const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(this.dataModel!, {
+      startRow: rgn.row, endRow: rgn.row + rgn.rowSizes.length - 1,
+      startColumn: rgn.column, endColumn: rgn.column + rgn.columnSizes.length - 1
+    }, rgn.region);
+
+    for (let r = joinedGroup.startRow; r < rgn.row; r++) {
+      const h = this._rowSections.sizeOf(r);
+      rgn.y -= h;
+      rgn.rowSizes = [h].concat(rgn.rowSizes);
     }
+    rgn.row = joinedGroup.startRow;
 
-    console.log("Region ", rgn);
-    console.log("calculateMergeOffsets: ", mergeStartOffset, mergeEndOffset, joinedGroup);
+    for (let c = joinedGroup.startColumn; c < rgn.column; c++) {
+      const w = this._columnSections.sizeOf(c);
+      rgn.x -= w;
+      rgn.columnSizes = [w].concat(rgn.columnSizes);
+    }
+    rgn.column = joinedGroup.startColumn;
 
     // Set up the cell config object for rendering.
     let config = {
@@ -4619,7 +4630,10 @@ class DataGrid extends Widget {
         // Compute the actual Y bounds for the cell.
         let y1 = Math.max(rgn.yMin, config.y);
         let y2 = Math.min(config.y + config.height - 1, rgn.yMax);
-        this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+
+        if (x2 > x1 && y2 > y1) {
+          this._blitContent(this._buffer, x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
+        }
         // console.log("blit: ", x1, y1, x2 - x1 + 1, y2 - y1 + 1, x1, y1);
 
         // Increment the running Y coordinate.
