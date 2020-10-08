@@ -4449,6 +4449,20 @@ class DataGrid extends Widget {
     return -1;
   }
 
+  private _getColumnSize(region: DataModel.CellRegion, index: number): number {
+    if (region === 'corner-header') {
+      return this._rowHeaderSections.sizeOf(index);
+    }
+    return this.columnSize(region as DataModel.ColumnRegion, index);
+  };
+
+  private _getRowSize(region: DataModel.CellRegion, index: number): number {
+    if (region === 'corner-header') {
+      return this._columnHeaderSections.sizeOf(index);
+    }
+    return this.rowSize(region as DataModel.RowRegion, index);
+  };
+
   /**
    * Draw the cells for the given paint region.
    */
@@ -4462,20 +4476,20 @@ class DataGrid extends Widget {
     // after the move, new region contains entirety of the merge groups
     rgn = JSONExt.deepCopy(rgn);
 
-    const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(this.dataModel!, {
+    const joinedGroup = CellGroup.joinCellGroupWithMergedCellGroups(this.dataModel!, {
       startRow: rgn.row, endRow: rgn.row + rgn.rowSizes.length - 1,
       startColumn: rgn.column, endColumn: rgn.column + rgn.columnSizes.length - 1
     }, rgn.region);
 
     for (let r = joinedGroup.startRow; r < rgn.row; r++) {
-      const h = this._rowSections.sizeOf(r);
+      const h = this._getRowSize(rgn.region, r);
       rgn.y -= h;
       rgn.rowSizes = [h].concat(rgn.rowSizes);
     }
     rgn.row = joinedGroup.startRow;
 
     for (let c = joinedGroup.startColumn; c < rgn.column; c++) {
-      const w = this._columnSections.sizeOf(c);
+      const w = this._getColumnSize(rgn.region, c);
       rgn.x -= w;
       rgn.columnSizes = [w].concat(rgn.columnSizes);
     }
@@ -4537,20 +4551,6 @@ class DataGrid extends Widget {
         config.groupIndex = this._getGroupIndex(config.region, row, column);
         yOffset = height;
 
-        const getColumnSize = (region: DataModel.CellRegion, index: number) => {
-          if (region === 'corner-header') {
-            return this._rowHeaderSections.sizeOf(index);
-          }
-          return this.columnSize(region as DataModel.ColumnRegion, index);
-        };
-
-        const getRowSize = (region: DataModel.CellRegion, index: number) => {
-          if (region === 'corner-header') {
-            return this._columnHeaderSections.sizeOf(index);
-          }
-          return this.rowSize(region as DataModel.RowRegion, index);
-        };
-
         /**
          * For merged cell regions, only rendering the merged region
          * if the "parent" cell is the one being painted. Bail otherwise.
@@ -4560,12 +4560,12 @@ class DataGrid extends Widget {
           if (group.startRow === row && group.startColumn === column) {
             width = 0;
             for (let c = group.startColumn; c <= group.endColumn; c++) {
-              width += getColumnSize(config.region, c);
+              width += this._getColumnSize(config.region, c);
             }
 
             height = 0;
             for (let r = group.startRow; r <= group.endRow; r++) {
-              height += getRowSize(config.region, r);
+              height += this._getRowSize(config.region, r);
             }
           }
           else {
@@ -5016,7 +5016,7 @@ class DataGrid extends Widget {
         sc2 = tmp;
       }
 
-      const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(
+      const joinedGroup = CellGroup.joinCellGroupWithMergedCellGroups(
         this.dataModel!,
         {startRow: sr1, endRow: sr2, startColumn: sc1, endColumn: sc2},
         "body"
@@ -5311,7 +5311,7 @@ class DataGrid extends Widget {
     let endRow = startRow;
     let endColumn = startColumn;
 
-    const joinedGroup = CellGroup.joinCellGroupsWithMergedCellGroups(
+    const joinedGroup = CellGroup.joinCellGroupWithMergedCellGroups(
       this.dataModel!,
       {startRow, endRow, startColumn, endColumn},
       "body"
