@@ -183,7 +183,7 @@ export namespace CellGroup {
     return { startRow, endRow, startColumn, endColumn };
   }
 
-  export function joinCellGroupsWithMergedCellGroups(
+  export function joinCellGroupWithMergedCellGroups(
     dataModel: DataModel,
     group: CellGroup,
     region: DataModel.CellRegion
