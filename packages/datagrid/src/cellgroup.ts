@@ -235,4 +235,69 @@ export namespace CellGroup {
     }
     return groupsAtColumn;
   }
+
+  export function isCellGroupAbove(group1: CellGroup, group2: CellGroup): boolean {
+    return group2.endRow >= group1.startRow;
+  }
+
+  export function isCellGroupBelow(group1: CellGroup, group2: CellGroup): boolean {
+    return group2.startRow <= group1.endRow;
+  }
+
+  export function joinCellGroupsIntersectingAtAxis(
+    dataModel: DataModel,
+    regions: DataModel.CellRegion[],
+    axis: "row" | "column",
+    group: CellGroup
+  ): CellGroup {
+    let groupsAtAxis: CellGroup[] = [];
+    // TODO: optimize this to break after first one found
+    if (axis === "row") {
+      for (const region of regions) {
+        for (let r = group.startRow; r <= group.endRow; r++) {
+          groupsAtAxis = groupsAtAxis.concat(
+            CellGroup.getCellGroupsAtRow(dataModel, region, r)
+          );
+        }
+      }
+    } else {
+      for (const region of regions) {
+        for (let c = group.startColumn; c <= group.endColumn; c++) {
+          groupsAtAxis = groupsAtAxis.concat(
+            CellGroup.getCellGroupsAtColumn(dataModel, region, c)
+          );
+        }
+      }
+    }
+
+    let mergedGroupAtAxis: CellGroup = CellGroup.joinCellGroups(groupsAtAxis);
+
+    if (groupsAtAxis.length > 0) {
+      let mergedCellGroups: CellGroup[] = [];
+      for (const region of regions) {
+        mergedCellGroups = mergedCellGroups.concat(
+          CellGroup.getCellGroupsAtRegion(dataModel, region)
+        );
+      }
+
+      for (let g = 0; g < mergedCellGroups.length; g++) {
+        const group = mergedCellGroups[g];
+        if (
+          CellGroup.areCellGroupsIntersectingAtAxis(
+            mergedGroupAtAxis,
+            group,
+            axis
+          )
+        ) {
+          mergedGroupAtAxis = CellGroup.joinCellGroups([
+            group,
+            mergedGroupAtAxis,
+          ]);
+          mergedCellGroups.splice(g, 1);
+          g = 0;
+        }
+      }
+    }
+    return mergedGroupAtAxis;
+  }
 }
