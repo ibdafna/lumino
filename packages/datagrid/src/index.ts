@@ -19,3 +19,4 @@ export * from './jsonmodel';
 export * from './renderermap';
 export * from './selectionmodel';
 export * from './textrenderer';
+export * from './cellgroup';
