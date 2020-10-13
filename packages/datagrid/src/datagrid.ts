@@ -1669,7 +1669,6 @@ class DataGrid extends Widget {
 
     // Coerce the selections to an array.
     let selections = toArray(selectionModel.selections());
-    console.log(selections);
 
     // Bail early if there are no selections.
     if (selections.length === 0) {
@@ -3481,8 +3480,6 @@ class DataGrid extends Widget {
       return;
     }
 
-    console.log("----------------------------------");
-
     // Bail early if the viewport is not visible.
     if (!this._viewport.isVisible) {
       this._scrollX = x;
@@ -3547,12 +3544,6 @@ class DataGrid extends Widget {
 
     const regions:DataModel.CellRegion[] = ['body','row-header'];
     let index = this._rowSections.indexOf(dy < 0 ? this._scrollY : this._scrollY + contentHeight);
-    let [mergeStartOffset, mergeEndOffset] = CellGroup.calculateMergeOffsets(this.dataModel!, regions, 'row', 
-          this._rowSections, index);
-
-    console.log("dy", dy);
-    console.log("index", index, "mergeStartOffset", mergeStartOffset, "mergeEndOffset", mergeEndOffset);
-
     let groupsAtAxis: CellGroup[] = [];
     let axis: 'row' | 'column' = 'row';
     if (axis === 'row') {
@@ -3605,7 +3596,6 @@ class DataGrid extends Widget {
           g = 0;
         }
       }
-      console.log("merged group at axis", mergedGroupAtAxis);
       if (mergedGroupAtAxis.startRow !== Number.MAX_VALUE) {
         if (dy > 0) {
           borderY = this._rowSections.offsetOf(mergedGroupAtAxis.startRow) - this._scrollY;
@@ -3613,12 +3603,8 @@ class DataGrid extends Widget {
           borderY = this._rowSections.offsetOf(mergedGroupAtAxis.endRow + 1);
         }
       }
-    } else {
-      console.log("no groupsAtAxis");
     }
 
-    console.log("borderY", borderY, "scrollY", this._scrollY, "->", y);
-    
     const prevScrollY = this._scrollY;
 
     // Update the internal Y scroll position.
@@ -3627,7 +3613,6 @@ class DataGrid extends Widget {
     let blitSrcX, blitSrcY, blitDstX, blitDstY, blitWidth, blitHeight;
     let paintX, paintY, paintWidth, paintHeight;
 
-    console.log("contentY", contentY, "contentHeight", contentHeight, "dy", dy);
     // Scroll the Y axis if needed. If the scroll distance exceeds
     // the visible height, paint everything. Otherwise, blit the
     // valid content and paint the dirty region.
@@ -3637,10 +3622,6 @@ class DataGrid extends Widget {
       } else {
         // Scrolling down
         if (dy > 0) {
-          // let x = 0;
-          // let y = dy < 0 ? contentY : contentY + dy;
-          // let w = width;
-          // let h = contentHeight - Math.abs(dy);
 
           blitSrcX = 0;
           blitSrcY = contentY + dy;
@@ -3671,9 +3652,6 @@ class DataGrid extends Widget {
           this._paintContent(paintX, paintY, paintWidth, paintHeight);
         }
 
-        console.log("Blit rect: src left:", blitSrcX, "src top:", blitSrcY, "dst left:", blitDstX, "dst top:", blitDstY, "width:", blitWidth, "height:", blitHeight);
-        console.log("Paint rect: left:", paintX, "top:", paintY, "width:", paintWidth, "height:", paintHeight);
-
         if (dy < 0) {
           const size = blitWidth / 3;
           this._canvasGC.save()
@@ -3686,40 +3664,7 @@ class DataGrid extends Widget {
           this._canvasGC.fillRect(blitSrcX + 2 * size, paintY, paintWidth, paintHeight);
           this._canvasGC.restore();
         }
-
-        // let x = 0;
-        // let y = dy < 0 ? contentY : contentY + dy;
-        // let w = width;
-        // let h = contentHeight - Math.abs(dy);
-
-        // this._blitContent(this._canvas, x, y, w, h, x, y - dy);
-        // this._paintContent(0, dy < 0 ? contentY : height - dy, width, Math.abs(dy));
-        
-        // this._blitContent(this._canvas, x, y + mergeEndOffset, w, h - mergeEndOffset, x, y - dy + mergeEndOffset);
-        // this._paintContent(
-        //   0, 
-        //   (dy < 0 ? contentY : height - dy - mergeStartOffset), 
-        //   width, 
-        //   Math.abs(dy) /*+ mergeStartOffset + mergeEndOffset*/);
       }
-
-      // console.log("blit", x, y, w, h, x, y - dy);
-      // console.log("paint", 0, dy < 0 ? contentY : height - dy, width, Math.abs(dy));
-      // console.log("values", dy, contentY, width, contentHeight);
-
-      // const size = w/2;
-      // this._canvasGC.save()
-      // this._canvasGC.lineWidth = 2;
-      // this._canvasGC.fillStyle = "rgba(255,0,0,0.1)";
-      // this._canvasGC.fillRect(x, y + mergeEndOffset, size, h - mergeEndOffset);
-      // this._canvasGC.fillStyle = "rgba(0,255,0,0.05)";
-      // this._canvasGC.fillRect(x+size, y - dy + mergeEndOffset, size, h - mergeEndOffset);
-      // this._canvasGC.fillStyle = "rgba(0,0,255,0.05)";
-      // this._canvasGC.fillRect(0, 
-      //   (dy < 0 ? contentY : height - dy - mergeStartOffset), 
-      //   width, 
-      //   Math.abs(dy) + mergeStartOffset + mergeEndOffset);
-      // this._canvasGC.restore()
     }
 
     // Update the internal X scroll position.
