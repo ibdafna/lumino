@@ -16,10 +16,6 @@ import {
 } from './datamodel';
 
 import {
-  CellGroup
-} from './cellgroup';
-
-import {
   SelectionModel
 } from './selectionmodel';
 
@@ -160,26 +156,6 @@ class BasicSelectionModel extends SelectionModel {
     return iter(this._selections);
   }
 
-
-  ///////////////////////////
-  ///// Experimentation /////
-  ///////////////////////////
-  //@ts-ignore
-  private _getCellGroupsAtRegion(rgn: DataModel.CellRegion): CellGroup[] {
-    let groupsAtRegion: CellGroup[] = []
-    const numGroups = this.dataModel!.groupCount(rgn);
-
-    for (let i = 0; i < numGroups; i++) {
-      const group = this.dataModel!.group(rgn, i)!;
-      groupsAtRegion.push(group);
-    }
-    return groupsAtRegion;
-  }
-  /////////////////////////// 
-  ///////////////////////////
-
-
-
   // private _isCellPartOfGroup(groups: CellGroup[]): boolean {
   //   for (const group of groups) {
   //     console.log(group)
@@ -196,10 +172,6 @@ class BasicSelectionModel extends SelectionModel {
     // Fetch the current row and column counts;
     let rowCount = this.dataModel.rowCount('body');
     let columnCount = this.dataModel.columnCount('body');
-
-    console.log("select :", args);
-    console.log("select :", this.dataModel.groupCount("body"));
-    console.log("select :", this._getCellGroupsAtRegion("body"))
 
     // Bail early if there is no content.
     if (rowCount <= 0 || columnCount <= 0) {
