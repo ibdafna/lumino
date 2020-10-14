@@ -4382,17 +4382,6 @@ class DataGrid extends Widget {
     }
   }
 
-  private _getGroupIndex(rgn: DataModel.CellRegion, row: number, column: number): number {
-    const numGroups = this._dataModel!.groupCount(rgn);
-    for (let i = 0; i < numGroups; i++) {
-      const group = this._dataModel!.group(rgn, i)!;
-      if (row >= group.startRow && row <= group.endRow && 
-          column >= group.startColumn && column <= group.endColumn) {
-            return i;
-          }
-    }
-    return -1;
-  }
 
   private _getColumnSize(region: DataModel.CellRegion, index: number): number {
     if (region === 'corner-header') {
@@ -4493,7 +4482,7 @@ class DataGrid extends Widget {
         // Compute the row index.
         let row = rgn.row + j;
         
-        config.groupIndex = this._getGroupIndex(config.region, row, column);
+        config.groupIndex = CellGroup.getGroupIndex(this.dataModel!, config.region, row, column);
         yOffset = height;
 
         /**
