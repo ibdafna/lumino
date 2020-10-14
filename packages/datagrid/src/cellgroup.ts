@@ -153,6 +153,28 @@ export namespace CellGroup {
     );
   }
 
+  
+  export function getGroupIndex(dataModel: DataModel, rgn: DataModel.CellRegion, row: number, column: number): number {
+    const numGroups = dataModel.groupCount(rgn);
+    for (let i = 0; i < numGroups; i++) {
+      const group = dataModel.group(rgn, i)!;
+      if (row >= group.startRow && row <= group.endRow && 
+          column >= group.startColumn && column <= group.endColumn) {
+            return i;
+          }
+    }
+    return -1;
+  }
+
+  export function getGroup(dataModel: DataModel, rgn: DataModel.CellRegion, row: number, column: number): CellGroup | null {
+    const groupIndex = getGroupIndex(dataModel, rgn, row, column);
+    if (groupIndex === -1) {
+      return null;
+    }
+
+    return dataModel.group(rgn, groupIndex);
+  }
+
   export function getCellGroupsAtRegion(
     dataModel: DataModel,
     rgn: DataModel.CellRegion
