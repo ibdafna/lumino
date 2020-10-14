@@ -3542,17 +3542,17 @@ class DataGrid extends Widget {
       return;
     }
 
-    const regions:DataModel.CellRegion[] = ['body','row-header'];
-    let index = this._rowSections.indexOf(dy < 0 ? this._scrollY : this._scrollY + contentHeight);
-    let groupsAtAxis: CellGroup[] = [];
-    let axis: 'row' | 'column' = 'row';
-    if (axis === 'row') {
-      for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(CellGroup.getCellGroupsAtRow(this.dataModel!, region, index));
+    const scrollYRegions:DataModel.CellRegion[] = ['body','row-header'];
+    let rowIndex = this._rowSections.indexOf(dy < 0 ? this._scrollY : this._scrollY + contentHeight);
+    let rowGroupAtAxis: CellGroup[] = [];
+    let rowAxis: 'row' | 'column' = 'row';
+    if (rowAxis === 'row') {
+      for (const region of scrollYRegions) {
+        rowGroupAtAxis = rowGroupAtAxis.concat(CellGroup.getCellGroupsAtRow(this.dataModel!, region, rowIndex));
       }
     } else {
-      for (const region of regions) {
-        groupsAtAxis = groupsAtAxis.concat(CellGroup.getCellGroupsAtColumn(this.dataModel!, region, index));
+      for (const region of scrollYRegions) {
+        rowGroupAtAxis = rowGroupAtAxis.concat(CellGroup.getCellGroupsAtColumn(this.dataModel!, region, rowIndex));
       }
     }
 
@@ -3565,14 +3565,14 @@ class DataGrid extends Widget {
     };
 
     let borderY = dy > 0 ?
-      (this._rowSections.offsetOf(index) - this._scrollY) : 
-      this._rowSections.offsetOf(index + 1);
+      (this._rowSections.offsetOf(rowIndex) - this._scrollY) : 
+      this._rowSections.offsetOf(rowIndex + 1);
     
     
-    if (groupsAtAxis.length > 0) {
-      let mergedGroupAtAxis:CellGroup = CellGroup.joinCellGroups(groupsAtAxis);
+    if (rowGroupAtAxis.length > 0) {
+      let mergedGroupAtAxis:CellGroup = CellGroup.joinCellGroups(rowGroupAtAxis);
       let mergedCellGroups: CellGroup[] = [];
-      for (const region of regions) {
+      for (const region of scrollYRegions) {
         mergedCellGroups = mergedCellGroups.concat(CellGroup.getCellGroupsAtRegion(this.dataModel!, region));
       }
       
@@ -3590,7 +3590,7 @@ class DataGrid extends Widget {
           }
         }
 
-        if (CellGroup.areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, axis)) {
+        if (CellGroup.areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, rowAxis)) {
           mergedGroupAtAxis = CellGroup.joinCellGroups([group, mergedGroupAtAxis]);
           mergedCellGroups.splice(g, 1);
           g = 0;
@@ -3667,24 +3667,152 @@ class DataGrid extends Widget {
       }
     }
 
+
+
+
+
+
+
+
+
+    const scrollXRegions:DataModel.CellRegion[] = ['body','column-header'];
+    let columnIndex = this._columnSections.indexOf(dx < 0 ? this._scrollX : this._scrollX + contentWidth);
+    let columnGroupAtAxis: CellGroup[] = [];
+    let columnAxis: 'column' | 'row' = 'column';
+    if (columnAxis === 'column') {
+      for (const region of scrollXRegions) {
+        columnGroupAtAxis = columnGroupAtAxis.concat(CellGroup.getCellGroupsAtColumn(this.dataModel!, region, columnIndex));
+      }
+    } else {
+      for (const region of scrollXRegions) {
+        columnGroupAtAxis = columnGroupAtAxis.concat(CellGroup.getCellGroupsAtColumn(this.dataModel!, region, columnIndex));
+      }
+    }
+
+    const _isCellGroupBefore = (group1: CellGroup, group2: CellGroup): boolean => {
+      return group2.endColumn >= group1.startColumn;
+    };
+
+    const _isCellGroupAfter = (group1: CellGroup, group2: CellGroup): boolean => {
+      return group2.startColumn <= group1.endColumn;
+    };
+
+    let borderX = dx > 0 ?
+      (this._columnSections.offsetOf(columnIndex) - this._scrollX) : 
+      this._columnSections.offsetOf(columnIndex + 1);
+    
+    
+    if (columnGroupAtAxis.length > 0) {
+      let mergedGroupAtAxis:CellGroup = CellGroup.joinCellGroups(columnGroupAtAxis);
+      let mergedCellGroups: CellGroup[] = [];
+      for (const region of scrollXRegions) {
+        mergedCellGroups = mergedCellGroups.concat(CellGroup.getCellGroupsAtRegion(this.dataModel!, region));
+      }
+      
+      for (let g = 0; g < mergedCellGroups.length; g++) {
+        const group = mergedCellGroups[g];
+
+        // Scrolling right
+        if (dx > 0) {
+           if (!_isCellGroupBefore(mergedGroupAtAxis, group)) {
+             continue;
+           }
+        } else {
+          if (!_isCellGroupAfter(mergedGroupAtAxis, group)) {
+            continue;
+          }
+        }
+
+        if (CellGroup.areCellGroupsIntersectingAtAxis(mergedGroupAtAxis, group, columnAxis)) {
+          mergedGroupAtAxis = CellGroup.joinCellGroups([group, mergedGroupAtAxis]);
+          mergedCellGroups.splice(g, 1);
+          g = 0;
+        }
+      }
+      if (mergedGroupAtAxis.startColumn !== Number.MAX_VALUE) {
+        if (dx > 0) {
+          borderX = this._columnSections.offsetOf(mergedGroupAtAxis.startColumn) - this._scrollX;
+        } else {
+          borderX = this._columnSections.offsetOf(mergedGroupAtAxis.endColumn + 1);
+        }
+      }
+    }
+
+    const prevScrollX = this._scrollX;
+
     // Update the internal X scroll position.
     this._scrollX = x;
+
 
     // Scroll the X axis if needed. If the scroll distance exceeds
     // the visible width, paint everything. Otherwise, blit the
     // valid content and paint the dirty region.
     if (dx !== 0 && contentWidth > 0) {
       if (Math.abs(dx) >= contentWidth) {
-        this._paintContent(contentX, 0, contentWidth, height);
+        this._paintContent(contentX, 0, height, contentWidth);
       } else {
-        let x = dx < 0 ? contentX : contentX + dx;
-        let y = 0;
-        let w = contentWidth - Math.abs(dx);
-        let h = height;
-        this._blitContent(this._canvas, x, y, w, h, x - dx, y);
-        this._paintContent(dx < 0 ? contentX : width - dx, 0, Math.abs(dx), height);
+        // Scrolling right
+        if (dx > 0) {
+
+          blitSrcX = contentX + dx;//0;
+          blitSrcY = 0;//contentY + dy;
+          blitDstX = contentX;//0;
+          blitDstY = 0;//contentY;
+          blitWidth = borderX - dx;//width;
+          blitHeight = height;//borderY - dy;
+          paintX = contentX + borderX - dx;//0;
+          paintY = 0;//contentY + borderY - dy;
+          paintWidth = contentWidth - borderX + dx;//width;
+          paintHeight = height;//contentHeight - borderY + dy;
+  
+          this._blitContent(this._canvas, blitSrcX, blitSrcY, blitWidth, blitHeight, blitDstX, blitDstY);
+          this._paintContent(paintX, paintY, paintWidth, paintHeight);
+        } else {
+          blitSrcX = contentX + borderX - prevScrollX;//0;
+          blitSrcY = 0;//contentY + borderY - prevScrollY;
+          blitDstX = contentX + borderX - prevScrollX - dx;//0;
+          blitDstY = 0;//contentY + borderY - prevScrollY - dy;
+          blitWidth = contentWidth - borderX + prevScrollX;//width;
+          blitHeight = height;//contentHeight - borderY + prevScrollY;
+          paintX = contentX;//0;
+          paintY = 0;//contentY;
+          paintWidth = borderX - prevScrollX - dx;//width;
+          paintHeight = height;//borderY - prevScrollY - dy;
+
+          this._blitContent(this._canvas, blitSrcX, blitSrcY, blitWidth, blitHeight, blitDstX, blitDstY);
+          this._paintContent(paintX, paintY, paintWidth, paintHeight);
+        }
+
+        // if (dx < 0) {
+        //   const size = blitHeight / 3;
+        //   this._canvasGC.save()
+        //   this._canvasGC.lineWidth = 1;
+        //   this._canvasGC.fillStyle = "rgba(255,0,0,0.1)";
+        //   this._canvasGC.fillRect(blitSrcX, blitSrcY, size, blitHeight);
+        //   this._canvasGC.fillStyle = "rgba(0,255,0,0.05)";
+        //   this._canvasGC.fillRect(blitSrcX, blitDstY + size, size, blitHeight);
+        //   this._canvasGC.fillStyle = "rgba(0,0,255,0.05)";
+        //   this._canvasGC.fillRect(blitSrcX, paintY + 2 * size, paintWidth, paintHeight);
+        //   this._canvasGC.restore();
+        // }
       }
     }
+
+    // Scroll the X axis if needed. If the scroll distance exceeds
+    // the visible width, paint everything. Otherwise, blit the
+    // valid content and paint the dirty region.
+    // if (dx !== 0 && contentWidth > 0) {
+    //   if (Math.abs(dx) >= contentWidth) {
+    //     this._paintContent(contentX, 0, contentWidth, height);
+    //   } else {
+    //     let x = dx < 0 ? contentX : contentX + dx;
+    //     let y = 0;
+    //     let w = contentWidth - Math.abs(dx);
+    //     let h = height;
+    //     this._blitContent(this._canvas, x, y, w, h, x - dx, y);
+    //     this._paintContent(dx < 0 ? contentX : width - dx, 0, Math.abs(dx), height);
+    //   }
+    // }
 
     // Paint the overlay.
     this._paintOverlay();
@@ -4870,7 +4998,7 @@ class DataGrid extends Widget {
 
     // Bail early if there are no visible cells.
     if (r1 < 0 || c1 < 0) {
-      return;
+      // return;
     }
 
     // Fetch the extra geometry.
