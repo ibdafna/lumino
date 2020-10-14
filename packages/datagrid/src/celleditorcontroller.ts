@@ -19,7 +19,9 @@ import {
     DynamicOptionCellEditor,
     ICellEditResponse
 } from './celleditor';
-import { CellGroup } from './cellgroup';
+
+import { CellGroup 
+} from './cellgroup';
 
 import {
   DataModel, MutableDataModel
