@@ -19,6 +19,7 @@ import {
     DynamicOptionCellEditor,
     ICellEditResponse
 } from './celleditor';
+import { CellGroup } from './cellgroup';
 
 import {
   DataModel, MutableDataModel
@@ -183,7 +184,16 @@ class CellEditorController implements ICellEditorController {
 
     const grid = cell.grid;
     const dataModel = grid.dataModel as MutableDataModel;
-    dataModel.setData('body', cell.row, cell.column, response.value);
+    let row = cell.row;
+    let column = cell.column;
+
+    const cellGroup = CellGroup.getGroup(grid.dataModel!, "body", row, column);
+    if (cellGroup) {
+      row = cellGroup.startRow;
+      column = cellGroup.startColumn;
+    }
+
+    dataModel.setData('body', row, column, response.value);
     grid.viewport.node.focus();
     if (response.cursorMovement !== 'none') {
       grid.moveCursor(response.cursorMovement);
